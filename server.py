@@ -7,11 +7,19 @@ import blockchain
 import json
 from uuid import uuid4
 from flask import Flask, jsonify, request
+from argparse import ArgumentParser
+from utils import *
 
-# main method
+
+# parse the argument
+parser = ArgumentParser()
+parser.add_argument("-p", "--port", default=5000, type=int, help= "This is the port number for the blockchain.")
+args = parser.parse_args()
+port_number= args.port
+
 app = Flask("blockchain_server")
 node_id = str(uuid4()).replace('-', '')
-
+print ("New BlockChain is on line, with node id {}".format(node_id))
 bc = blockchain.Blockchain()
 
 @app.route('/mine', methods=['GET'])
@@ -28,7 +36,7 @@ def mining():
     )
 
     #append the block to the chain
-    previous_hash = bc.hash(last_block)
+    previous_hash = hash(last_block)
     new_block = bc.create_new_block(proof, previous_hash)
 
     response = {
@@ -63,6 +71,33 @@ def get_full_chain():
     }
     return jsonify(response), 200
 
+@app.route('/nodes/register', methods=['POST'])
+def register_nodes():
+    request_json = request.get_json()
+    nodes = request_json.get('nodes')
+    for node in nodes:
+        bc.register_node(node)
+    response = {
+        'msg': 'New nodes have been added',
+        'total_nodes':list(bc.node_list),
+    }
+    return jsonify(response), 201
+
+@app.route('/nodes/resolve', methods=['GET'])
+def consensus():
+    replaced = bc.resolve_conflicts()
+    if replaced:
+        response = {
+            'msg': 'Current chain has been replaced.',
+            'chain': bc.chain
+        }
+    else:
+        response = {
+            'msg': 'Current chain is up-to-date.',
+            'chain':bc.chain
+        }
+    return jsonify(response), 200
+
 if __name__ == "__main__":
-  app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=port_number)
 
