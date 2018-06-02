@@ -12,8 +12,9 @@ import json
 import time
 
 # global varriables
-hosts = []
-users = {}
+hosts = [] # keeps a list of port numbers
+users = {} # dictionary keeping username -> # of coins
+exit_flag = True # flag to exit the program
 
 ###################
 # Helper functions
@@ -48,19 +49,18 @@ def add_node(args):
     Returns:
         0 if succeeds otherwise 1
     """
-    print ("Entering add_node")
     if not len(args):
         print ("Please enter a port number\nUSAGE: addnode 5000")
         return 1
     if not len(args):
         print ("ERROR: Please provide port numbers")
     for node in args:
-        if check_int(node)
+        if check_int(node):
             val = int(node)
         else:
             print ("{} is not a valid port number".format(node))
             continue
-        print ("Launching server on port {}".format(node))
+        print ("Launching a blockchain server on port {}".format(node))
         proc = Popen(['python', 'blockchain_server.py', "--port", node], stdout=PIPE, stderr=PIPE)
 
         time.sleep(1) # sleep 1 seconds to wait for server to fire up
@@ -95,7 +95,6 @@ def mine(args):
     Returns:
         0 if succeeds otherwise 1
     """
-    print ("Mining")
     if len(args) != 2:
         print ("Mine expects two arguments: user and node port\nUSAGE: mine Jerry 5000")
         return 1
@@ -126,7 +125,6 @@ def trans(args):
     Returns:
         0 if succeeds otherwise 1
     """
-    print ("trans")
     if len(args) != 4:
         print ("trans operation expects four arguments: sender, recipient, amount, port")
         return 1
@@ -161,7 +159,6 @@ def delete_node(args):
     Returns:
         0 if succeeds otherwise 1
     """
-    print ("Delete_node")
     port = int(args[0])
     ret = shutdown_node(port)
     if ret == 0:
@@ -177,7 +174,6 @@ def print_users(args):
     Returns:
         0 if succeeds otherwise 1
     """
-    print ("Print all users")
     if not len(users):
         print ("No users found.")
     for user, val in users.items():
@@ -193,12 +189,25 @@ def print_node(args):
         0 if succeeds otherwise 1
     """
     port = args[0]
-    if not check_int(port)
+    if not check_int(port):
         print ("The port number must be an integer")
         return 1
     url = "http://localhost:{}/chain".format(port)
     ret = requests.get(url)
-    print (ret.text)
+    data = json.loads(ret.text)
+    # print the chain
+    for i in range(int(data["length"])-1):
+        print ("========================================")
+        print (data["chain"][i])
+        print ("========================================")
+        print ("         ||         ")
+        print ("         ||         ")
+        print ("         ||         ")
+        print ("         \/         ")
+
+    print ("========================================")
+    print (data["chain"][-1])
+    print ("========================================")
     return 0
 
 def resolve_node(args):
@@ -217,20 +226,49 @@ def resolve_node(args):
         print (ret)
     return 0
 
+def get_help(args):
+    """
+    Print the help menu
+    Return 0
+    """
+    help_string = "In the blockchain simulation, following commands are included:"
+    str_list = ["addnode", "launch a blockchain node server.\n","Usage: addnode <portnumber>",
+    "mine", "mine a bitcoin on a specific node for a specific user.\n", "Usage: mine <user> <portnumber>",
+    "trans", "perform a bitcoin transaction between users.\n", "Usage: trans <sender> <recipient> <amount>\
+    <portnumber>",
+    "deletenode", "shutdown a blockchain node server.\n", "Usage: deletenode <portnumber>",
+    "resolve", "run consensus algorithm among its neighbor nodes.\n", "Usage: resolve <portnumber>",
+    "printusers","print all registered users and their bitcoin numbers.\n", "Usage: printusers",
+    "printnode", "print the blockchain for a specific node.\n", "Usage: printnode <portnumber>",
+    "help", "print the help information.\n", "Usage: help",
+    "exit", "exit the console.\n", "Usage: exit"]
+    print (help_string)
+    ind = 0
+    while ind < len(str_list):
+        str_to_print = '{0: <13}'.format(str_list[ind]) + str_list[ind+1] + "             " + str_list[ind+2]
+        print (str_to_print)
+        ind += 3
+    return 0
+
 def exit(args):
     """
     Exit gracefully, shutting down all nodes/
     Returns 1
     """
-    print ("exit")
+    global exit_flag
     for node in hosts:
         ret = shutdown_node(node)
         if ret == 0:
             print ("Killing server node with portnumber {}".format(str(node)))
         else:
             print ("Failed to kill the server node on port {}".format(str(node)))
-    exit(1)
+    exit_flag = False
+    print ("Goodbye.")
+    return 0
 
+"""
+dictionary mapping users command to the handler functions
+"""
 dict_functions = {
     "addnode" : add_node,
     "mine" : mine,
@@ -239,6 +277,7 @@ dict_functions = {
     "resolve" : resolve_node,
     "printusers" : print_users,
     "printnode" : print_node,
+    "help" : get_help,
     "exit" : exit
 }
 
@@ -247,7 +286,7 @@ def main():
 
     print ("Welcome to BlockChain simulation !")
     # main user loop
-    while (True):
+    while (exit_flag):
         response = input(">> ")
         res_list = response.split()
         if len(res_list) == 0:
