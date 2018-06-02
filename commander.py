@@ -30,6 +30,16 @@ def shutdown_node(port):
     hosts.remove(port)
     return 0
 
+def check_int(str):
+    """
+    Check if a string can be converted to an integer
+    """
+    try:
+        int(str)
+    except ValueError:
+        return False
+    return True
+
 def add_node(args):
     """
     Launcher a blockchain server given a port number
@@ -40,17 +50,20 @@ def add_node(args):
     """
     print ("Entering add_node")
     if not len(args):
+        print ("Please enter a port number\nUSAGE: addnode 5000")
+        return 1
+    if not len(args):
         print ("ERROR: Please provide port numbers")
     for node in args:
-        try:
+        if check_int(node)
             val = int(node)
-        except ValueError:
+        else:
             print ("{} is not a valid port number".format(node))
             continue
         print ("Launching server on port {}".format(node))
         proc = Popen(['python', 'blockchain_server.py', "--port", node], stdout=PIPE, stderr=PIPE)
 
-        time.sleep(1)
+        time.sleep(1) # sleep 1 seconds to wait for server to fire up
 
         # register existing nodes on the new node
         if len(hosts) != 0:
@@ -72,7 +85,7 @@ def add_node(args):
             print (ret)
         # append the new node to the hosts
         hosts.append(val)
-
+    return 0
 
 def mine(args):
     """
@@ -83,8 +96,16 @@ def mine(args):
         0 if succeeds otherwise 1
     """
     print ("Mining")
-    # TODO
+    if len(args) != 2:
+        print ("Mine expects two arguments: user and node port\nUSAGE: mine Jerry 5000")
+        return 1
     name, host = args
+    if not check_int(host):
+        print ("Port number must be an integer")
+        return 1
+    if not int(host) in hosts:
+        print ("Cannot find a node server on port {}".format(int(host)))
+        return 1
     url = 'http://localhost:{}/{}'.format(host,"mine")
     ret = requests.get(url)
     print (ret)
@@ -106,15 +127,22 @@ def trans(args):
         0 if succeeds otherwise 1
     """
     print ("trans")
-    # TODO
+    if len(args) != 4:
+        print ("trans operation expects four arguments: sender, recipient, amount, port")
+        return 1
     sender, recipient, amount, port = args
+    if not check_int(amount) or not check_int(port):
+        print ("amount and port must all be integers")
+        return 1
+    if not sender in users and users[sender] < amount:
+        print ("{} does not have enough balance")
+        return 1
     url = "http://localhost:{}/transactions/new".format(port)
     payload = {
         "sender": sender,
         "recipient": recipient,
         "amount":int(amount)
     }
-#    headers = {'Content-Type': 'application/json'}
     ret = requests.post(url, json=payload)
     # increment and decrement the value for sender and recipient
     users[sender] -= 1
@@ -123,6 +151,7 @@ def trans(args):
     else:
         users[recipient] = 1
     print (ret.text)
+    return 0
 
 def delete_node(args):
     """
@@ -139,6 +168,8 @@ def delete_node(args):
         print ("Killing server node with portnumber {}".format(port))
     else:
         print ("Failed to kill the server node on port {}".format(port))
+        return 1
+    return 0
 
 def print_users(args):
     """
@@ -147,8 +178,11 @@ def print_users(args):
         0 if succeeds otherwise 1
     """
     print ("Print all users")
+    if not len(users):
+        print ("No users found.")
     for user, val in users.items():
         print ("{}: {} coins".format(user, val))
+    return 0
 
 def print_node(args):
     """
@@ -159,6 +193,9 @@ def print_node(args):
         0 if succeeds otherwise 1
     """
     port = args[0]
+    if not check_int(port)
+        print ("The port number must be an integer")
+        return 1
     url = "http://localhost:{}/chain".format(port)
     ret = requests.get(url)
     print (ret.text)
@@ -171,6 +208,9 @@ def resolve_node(args):
         0 if succeeds otherwise 1
     """
     for node in args:
+        if not check_int(node):
+            print ("The port number must be an integer")
+            return 1
         val = int(node)
         url = "http://localhost:{}/nodes/resolve".format(val)
         ret = requests.get(url)
