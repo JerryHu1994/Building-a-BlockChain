@@ -68,6 +68,7 @@ def get_full_chain():
     response = {
         'chain': bc.chain,
         'length': len(bc.chain),
+        'nodes': list(bc.node_list),
     }
     return jsonify(response), 200
 
