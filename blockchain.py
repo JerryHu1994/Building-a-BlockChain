@@ -29,7 +29,7 @@ class Blockchain(object):
         local_time = time.localtime()
         block = {
             'index': len(self.chain) + 1,
-            'timestamp': time.strftime("%a, $d-%b-%Y-%H:%M:%S GMT", local_time),
+            'timestamp': time.strftime("%a, %d-%b-%Y-%H:%M:%S GMT", local_time),
             'transactions':self.current_transactions,
             'key':key,
             'previous_hash': previous_hash,

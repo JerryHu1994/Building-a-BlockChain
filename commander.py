@@ -10,6 +10,7 @@ import requests
 import os
 import json
 import time
+import re
 
 # global varriables
 hosts = [] # keeps a list of port numbers
@@ -41,6 +42,17 @@ def check_int(str):
         return False
     return True
 
+def format_node(dic):
+    """
+    Returns a formated string for a node in blockchain
+    """
+    return "index: " + str(dic["index"]) + "\n" + "key:" + str(dic["key"]) + "\n" + \
+    "previous_hash: " + str(dic["previous_hash"]) + "\n" + "timestamp: " + \
+    dic["timestamp"]
+
+##################################
+# Handler function for user inputs
+##################################
 def add_node(args):
     """
     Launcher a blockchain server given a port number
@@ -107,7 +119,9 @@ def mine(args):
         return 1
     url = 'http://localhost:{}/{}'.format(host,"mine")
     ret = requests.get(url)
-    print (ret)
+    data = json.loads(ret.text)
+    if data['msg'] == "New Block Added":
+        print ("A new bitcoin is mined for user {}".format(name))
 
     # save the award for the user
     if name in users:
@@ -142,13 +156,14 @@ def trans(args):
         "amount":int(amount)
     }
     ret = requests.post(url, json=payload)
+    data = json.loads(ret.text)
+    print ("{} transfers {} bitcoin to {}".format(sender, amount, Tom))
     # increment and decrement the value for sender and recipient
     users[sender] -= 1
     if recipient in users:
         users[recipient] -= 1
     else:
         users[recipient] = 1
-    print (ret.text)
     return 0
 
 def delete_node(args):
@@ -162,7 +177,7 @@ def delete_node(args):
     port = int(args[0])
     ret = shutdown_node(port)
     if ret == 0:
-        print ("Killing server node with portnumber {}".format(port))
+        print ("Shutting down bitcoin server with portnumber {}".format(port))
     else:
         print ("Failed to kill the server node on port {}".format(port))
         return 1
@@ -192,21 +207,24 @@ def print_node(args):
     if not check_int(port):
         print ("The port number must be an integer")
         return 1
+    # check the node is launched
+    if not int(port) in hosts:
+        print ("The port {} is not launched".format(port))
+        return 1
     url = "http://localhost:{}/chain".format(port)
     ret = requests.get(url)
     data = json.loads(ret.text)
     # print the chain
     for i in range(int(data["length"])-1):
         print ("========================================")
-        print (data["chain"][i])
+        print (format_node(data["chain"][i]))
         print ("========================================")
-        print ("         ||         ")
         print ("         ||         ")
         print ("         ||         ")
         print ("         \/         ")
 
     print ("========================================")
-    print (data["chain"][-1])
+    print (format_node(data["chain"][-1]))
     print ("========================================")
     return 0
 
@@ -234,8 +252,7 @@ def get_help(args):
     help_string = "In the blockchain simulation, following commands are included:"
     str_list = ["addnode", "launch a blockchain node server.\n","Usage: addnode <portnumber>",
     "mine", "mine a bitcoin on a specific node for a specific user.\n", "Usage: mine <user> <portnumber>",
-    "trans", "perform a bitcoin transaction between users.\n", "Usage: trans <sender> <recipient> <amount>\
-    <portnumber>",
+    "trans", "perform a bitcoin transaction between users.\n", "Usage: trans <sender> <recipient> <amount> <portnumber>",
     "deletenode", "shutdown a blockchain node server.\n", "Usage: deletenode <portnumber>",
     "resolve", "run consensus algorithm among its neighbor nodes.\n", "Usage: resolve <portnumber>",
     "printusers","print all registered users and their bitcoin numbers.\n", "Usage: printusers",
